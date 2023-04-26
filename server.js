@@ -20,7 +20,7 @@ async function GetUniqueUser(id, Username, Country, City) {
   const con = await GetConnection();
   const result = await con.execute(
     "SELECT * FROM users WHERE id = ? or Username = ? or Country = ? or City = ?",
-    [id || null, Username || null, Country || null, City || null]
+    [id, Username || null, Country || null, City || null]
   );
   await con.end();
   return result[0];
@@ -30,7 +30,7 @@ async function AddUser(Username, Password, Country, City) {
   const con = await GetConnection();
   const result = await con.execute(
     "INSERT users(Username, Password, Country, City) VALUES(?, ?, ?, ?)",
-    [Username, Password, Country, City]
+    [Username, Password, Country || "Not Given", City || "Not Given"]
   );
   await con.end();
   return result[0];
@@ -68,12 +68,12 @@ async function AuthorizeUser(req, res, SECRETHASH) {
   let verify;
   try {
     verify = jwt.verify(token, SECRETHASH);
+    return verify;
   } catch (err) {
     console.log(err);
     res.status(401).send("Invalid auth token");
     return false;
   }
-  return verify;
 }
 
 module.exports = {

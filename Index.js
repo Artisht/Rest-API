@@ -21,15 +21,19 @@ app.get("/", (req, res) => {
     
     <li> GET /Users - returnerar alla användare (Kräver inloggning (TOKEN))</li>
 
-    <li> GET /Users?id=?&Username=?&Country=?&City=? - returnerar alla användare som har matchande parametrar, OBS! Alla parametrar behövs inte, du kan skriva dem du vill söka på. (Kräver inloggning (TOKEN))</li>
+    <li> GET /Users?id=?&Username=?&Country=?&City=? - returnerar alla användare som har matchande parametrar, 
+    OBS! Alla parametrar behövs inte, du kan skriva dem du vill söka på. (Kräver inloggning (TOKEN))</li>
     
     <li> GET /Users:id - returnerar användare med angivet id (Kräver inloggning (TOKEN)) </li>
     
-    <li> POST /RegisterUser - skapa ett konto med parameterna: Username, Password, Country, City. Skrivet i denna order. Det kan ej finnas två av samma användarnamn på Databasen. </li>
+    <li> POST /RegisterUser - skapa ett konto med parameterna: Username, Password, Country, City. Skrivet i denna order. 
+    Det kan ej finnas två av samma användarnamn på Databasen. Däremot behövs det inte att fylla Country & City om man inte vill, 
+    där det blir skrivet som "Not Given" </li>
 
-    <li> Put /Users/:id - Ändra parameterna: Username, Password, Country, City på ett registrerat konto med angivna id.  </li>
+    <li> Put /Users/:id - Ändra parameterna: Username, Password, Country, 
+    City på ett registrerat konto med angivet id.  </li>
     
-    <li>POST /Login - logga in på ditt konto (Kräver: Username, Password)</li>
+    <li>POST /Login - logga in på ditt konto (Kräver: Username & Password)</li>
     
     </ul>`);
 });
@@ -88,10 +92,10 @@ app.post("/RegisterUser", async (req, res) => {
         City: City,
         id: id,
       };
-      res.json(result);
+      res.status(201).json(result);
     } else {
-        Message = "Username Taken"
-        res.status(400).send(Message);
+      Message = "Username Taken";
+      res.status(400).send(Message);
     }
   } else {
     res.sendStatus(422);
@@ -100,31 +104,43 @@ app.post("/RegisterUser", async (req, res) => {
 
 app.put("/Users/:id", async (req, res) => {
   if (ValidateUser(req.body)) {
-    let id = req.params.id;
-    let IsValidId = await server.GetUniqueUser(id);
-    if (IsValidId.length > 0) {
-      let Username = req.body.Username || null;
-      let HashedPassword = hash(req.body.Password) || null;
-      let Country = req.body.Country || null;
-      let City = req.body.City || null;
+    let Validation = server.AuthorizeUser(req, res, SECRETHASH);
+    if (Validation != false) {
+      let UserId = req.params.id;
+      let IsValidId = await server.GetUniqueUser(UserId);
+      if (IsValidId.length > 0) {
+        let Username = req.body.Username || null;
+        let HashedPassword = hash(req.body.Password) || null;
+        let Country = req.body.Country || null;
+        let City = req.body.City || null;
 
-      let UpdateUser = await server.UpdateUser(
-        Username,
-        HashedPassword,
-        Country,
-        City,
-        id
-      );
+        let check = await server.GetUser(Username);
 
-      let result = {
-        Username: Username,
-        Country: Country,
-        City: City,
-        id: id,
-      };
-      res.json(result);
-    } else {
-      res.sendStatus(422);
+        if (check.length < 1 || check[0].id == UserId) {
+          // Kollar så att det är inte t.ex samma användarnamn av nån annan eller om det är samma användare där då ska du kunna behålla ditt användarnamn medans man ändrar andra parametrar.
+          let UpdateUser = await server.UpdateUser(
+            Username,
+            HashedPassword,
+            Country,
+            City,
+            UserId
+          );
+
+          let result = {
+            Username: Username,
+            Country: Country,
+            City: City,
+            id: UserId,
+          };
+
+          res.json(result);
+        } else {
+          Message = "Username Taken";
+          res.status(400).send(Message);
+        }
+      } else {
+        res.sendStatus(422);
+      }
     }
   } else {
     res.sendStatus(422);
@@ -135,17 +151,21 @@ app.post("/Login", async (req, res) => {
   let Username = req.body.Username;
   let HashedPassword = hash(req.body.Password);
   let User = await server.GetUser(Username);
-  if (HashedPassword === User[0].Password) {
-    let payload = {
-      sub: User[0].id,
-      username: Username,
-      Country: User[0].Country || null,
-      City: User[0].City || null
-    };
-    let token = jwt.sign(payload, SECRETHASH, { expiresIn: '1h' });
-    res.json(token);
+  if (User.length < 1) {
+    res.status(401).send("Invalid Credentials");
   } else {
-    res.sendStatus(401);
+    if (HashedPassword === User[0].Password) {
+      let payload = {
+        id: User[0].id,
+        Username: Username,
+        Country: User[0].Country || null,
+        City: User[0].City || null,
+      };
+      let token = jwt.sign(payload, SECRETHASH, { expiresIn: "1h" });
+      res.json(token);
+    } else {
+      res.status(401).send("Invalid Credentials");
+    }
   }
 });
 
