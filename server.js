@@ -60,8 +60,8 @@ var jwt = require("jsonwebtoken");
 async function AuthorizeUser(req, res, SECRETHASH) {
   let AuthHeader = req.headers["authorization"];
   if (AuthHeader === undefined) {
-    res.status(401);
-    res.send("Unauthorize");
+    res.status(401).send("Unauthorized");
+    console.log("Yes")
     return false;
   }
   let token = AuthHeader.slice(7);
@@ -74,6 +74,7 @@ async function AuthorizeUser(req, res, SECRETHASH) {
     res.status(401).send("Invalid auth token");
     return false;
   }
+  console.log(verify)
   return verify;
 }
 

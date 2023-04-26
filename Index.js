@@ -9,6 +9,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
+var jwt = require("jsonwebtoken");
+const SECRET = "Hassan abood phon is grape";
+const SECRETHASH = hash(SECRET);
+
 app.get("/", (req, res) => {
   res.send(`
     <h1>Dokumentation av olika API</h1>
@@ -125,23 +129,18 @@ app.put("/Users/:id", async (req, res) => {
   }
 });
 
-var jwt = require("jsonwebtoken");
-const SECRET = "Hassan abood phon is grape";
-const SECRETHASH = hash(SECRET);
-
 app.post("/Login", async (req, res) => {
   let Username = req.body.Username;
   let HashedPassword = hash(req.body.Password);
   let User = await server.GetUser(Username);
-  if (HashedPassword === User.Password) {
+  if (HashedPassword === User[0].Password) {
     let payload = {
-      sub: User.id,
+      sub: User[0].id,
       username: Username,
-      Country: User.Country || null,
-      City: User.City || null,
-      expiresIn: "1h",
+      Country: User[0].Country || null,
+      City: User[0].City || null
     };
-    let token = jwt.sign(payload, SECRETHASH);
+    let token = jwt.sign(payload, SECRETHASH, { expiresIn: '1h' });
     res.json(token);
   } else {
     res.sendStatus(401);
