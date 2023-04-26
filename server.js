@@ -20,7 +20,7 @@ async function GetUniqueUser(id, Username, Country, City) {
   const con = await GetConnection();
   const result = await con.execute(
     "SELECT * FROM users WHERE id = ? or Username = ? or Country = ? or City = ?",
-    [id, Username, Country, City]
+    [id || null, Username || null, Country || null, City || null]
   );
   await con.end();
   return result[0];
@@ -61,7 +61,6 @@ async function AuthorizeUser(req, res, SECRETHASH) {
   let AuthHeader = req.headers["authorization"];
   if (AuthHeader === undefined) {
     res.status(401).send("Unauthorized");
-    console.log("Yes")
     return false;
   }
   let token = AuthHeader.slice(7);
@@ -74,7 +73,6 @@ async function AuthorizeUser(req, res, SECRETHASH) {
     res.status(401).send("Invalid auth token");
     return false;
   }
-  console.log(verify)
   return verify;
 }
 

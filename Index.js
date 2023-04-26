@@ -21,13 +21,15 @@ app.get("/", (req, res) => {
     
     <li> GET /Users - returnerar alla användare (Kräver inloggning (TOKEN))</li>
 
-    <li> GET /Users?id=?&Username=?&Country=?&City=? - returnerar alla användare som har matchande parametrar (nycklar), OBS! Alla parametrar behövs inte, du kan skriva dem du vill söka på. (Kräver inloggning (TOKEN))</li>
+    <li> GET /Users?id=?&Username=?&Country=?&City=? - returnerar alla användare som har matchande parametrar, OBS! Alla parametrar behövs inte, du kan skriva dem du vill söka på. (Kräver inloggning (TOKEN))</li>
     
     <li> GET /Users:id - returnerar användare med angivet id (Kräver inloggning (TOKEN)) </li>
     
-    <li>POST /RegisterUser - skapa ett konto</li>
+    <li> POST /RegisterUser - skapa ett konto med parameterna: Username, Password, Country, City. Skrivet i denna order. Det kan ej finnas två av samma användarnamn på Databasen. </li>
+
+    <li> Put /Users/:id - Ändra parameterna: Username, Password, Country, City på ett registrerat konto med angivna id.  </li>
     
-    <li>POST /loggin - logga in på ditt konto </li>
+    <li>POST /Login - logga in på ditt konto (Kräver: Username, Password)</li>
     
     </ul>`);
 });
@@ -45,7 +47,7 @@ app.get("/Users", async (req, res) => {
       let id = req.query.id || null;
       let Username = req.query.Username || null;
       let Country = req.query.Country || null;
-      let City = req.query.Country || null;
+      let City = req.query.City || null;
       let result = await server.GetUniqueUser(id, Username, Country, City);
       res.send(result);
     } else {
@@ -59,7 +61,7 @@ app.get("/Users/:id", async (req, res) => {
   let Validation = server.AuthorizeUser(req, res, SECRETHASH);
   if (Validation != false) {
     let id = req.params.id;
-    let result = await server.GetUniqueUser(id, null, null, null);
+    let result = await server.GetUniqueUser(id);
     res.send(result);
   }
 });
@@ -101,10 +103,10 @@ app.put("/Users/:id", async (req, res) => {
     let id = req.params.id;
     let IsValidId = await server.GetUniqueUser(id);
     if (IsValidId.length > 0) {
-      let Username = req.body.Username;
-      let HashedPassword = hash(req.body.Password);
-      let Country = req.body.Country;
-      let City = req.body.City;
+      let Username = req.body.Username || null;
+      let HashedPassword = hash(req.body.Password) || null;
+      let Country = req.body.Country || null;
+      let City = req.body.City || null;
 
       let UpdateUser = await server.UpdateUser(
         Username,
